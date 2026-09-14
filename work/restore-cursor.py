@@ -1,0 +1,23 @@
+from pathlib import Path
+import re
+p=Path('dist/game.js');s=p.read_text(encoding='utf-8')
+s=s.replace("hover=null,tool=", "hover=null,pendingAim=null,tool=")
+s=s.replace('function reset(){', 'function reset(){pendingAim=null;').replace('function end(won){','function end(won){pendingAim=null;')
+s=s.replace("phase!=='build'||CORE===null", "phase!=='build'||CORE===null||pendingAim!==null")
+s=s.replace("canvas.addEventListener('pointermove',e=>{hover=pointer(e)})", "function aimAt(p){if(pendingAim&&Math.hypot(p.x-pendingAim.x,p.y-pendingAim.y)>.03)pendingAim.angle=Math.atan2(p.y-pendingAim.y,p.x-pendingAim.x)}\ncanvas.addEventListener('pointermove',e=>{hover=pointer(e);aimAt(hover)})")
+s=s.replace('return;const w=nearestEdge(p.x,p.y)', "return;if(pendingAim){aimAt(p);if(pendingAim.existing)pendingAim.existing.angle=pendingAim.angle;else towers.push({...pendingAim,cool:0});pendingAim=null;message('뱅크샷 조준을 확정했습니다.');ui();return}const w=nearestEdge(p.x,p.y)")
+s=s.replace("t.angle=angle;message('뱅크샷 발사 방향을 변경했습니다.');", "pendingAim={...t,existing:t};message('커서로 조준한 뒤 클릭하세요. Esc로 취소합니다.');")
+s=s.replace("towers.push({cell:id,...center(id),type:tool,angle,cool:0});message('포탑을 설치했습니다.')", "if(tool==='bank'){pendingAim={cell:id,...center(id),type:tool,angle};message('커서로 조준한 뒤 클릭해 설치를 확정하세요.');}else{towers.push({cell:id,...center(id),type:tool,angle,cool:0});message('포탑을 설치했습니다.');}")
+s=s.replace("b.onclick=()=>{tool=b.dataset.tool", "b.onclick=()=>{pendingAim=null;tool=b.dataset.tool")
+s=re.sub(r'^function setAngle\([^\n]+', 'function setAngle(degrees){if(Number.isFinite(degrees))angle=((degrees%360)+360)%360*Math.PI/180}',s,flags=re.M)
+s=re.sub(r"^\$\('directions'\)[^\n]+\n",'',s,flags=re.M)
+s=s.replace("if($('options-dialog').open)return;", "if($('options-dialog').open)return;if(e.key==='Escape'&&pendingAim){pendingAim=null;message('조준을 취소했습니다.');ui();return;}")
+s=s.replace("ctx.globalAlpha=1;if(hover&&phase", "ctx.globalAlpha=1;if(pendingAim){const a=pendingAim;ctx.save();ctx.translate(a.x*s,a.y*s);ctx.rotate(a.angle);ctx.strokeStyle='#ffc16b';ctx.fillStyle='#66482d';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,18,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#ffc16b';ctx.fillRect(0,-5,27,10);ctx.setLineDash([7,5]);ctx.beginPath();ctx.moveTo(28,0);ctx.lineTo(12*s,0);ctx.stroke();ctx.restore();return}if(hover&&phase")
+p.write_text(s,encoding='utf-8')
+p=Path('dist/index.html');s=p.read_text(encoding='utf-8');s=re.sub(r'<div class="direction-label">.*?<p class="hint">.*?</p>', '<p class="hint">일반 포탑: 한 번 클릭해 설치 · 자동 조준.<br>뱅크샷: 위치 클릭 → 커서 조준 → 클릭 확정.<br>설치된 뱅크샷을 클릭하면 다시 조준합니다. Esc로 취소.</p>',s);s=s.replace('도구 선택 → 위치 클릭으로 바로 설치','도구를 선택하고 맵에 배치하세요.');p.write_text(s,encoding='utf-8')
+p=Path('work/check.cjs');s=p.read_text(encoding='utf-8')
+s=s.replace("reset();setAngle(45);tool='bank';canvas.listeners.pointerdown({clientX:120,clientY:120});canvas.listeners.pointermove({clientX:300,clientY:500});towers.length===1&&Math.abs(towers[0].angle-Math.PI/4)<1e-10", "reset();tool='bank';canvas.listeners.pointerdown({clientX:120,clientY:120});canvas.listeners.pointermove({clientX:200,clientY:200});towers.length===0&&Math.abs(pendingAim.angle-Math.PI/4)<1e-10")
+s=s.replace("setAngle(180);canvas.listeners.pointerdown({clientX:120,clientY:120});towers.length===1&&Math.abs(towers[0].angle-Math.PI)<1e-10", "canvas.listeners.pointerdown({clientX:200,clientY:200});towers.length===1&&Math.abs(towers[0].angle-Math.PI/4)<1e-10")
+s+="\nassert.ok(!fs.readFileSync('dist/index.html','utf8').includes('id=\"angle-number\"'));\nconsole.log('PASS: bank cursor aim restored and direction panel removed.');\n"
+p.write_text(s,encoding='utf-8')
+p=Path('work/portable.py');s=p.read_text(encoding='utf-8').replace('뱅크샷은 방향 버튼이나 각도로 설정합니다.', '뱅크샷은 위치 클릭 → 커서 조준 → 클릭 확정으로 설치합니다. Esc로 조준을 취소합니다.');p.write_text(s,encoding='utf-8')

@@ -1,0 +1,23 @@
+from pathlib import Path
+p=Path('dist/game.js');s=p.read_text(encoding='utf-8')
+s=s.replace("price:70,repeatable:true", "price:50,repeatable:true")
+s=s.replace("if(!item||phase!=='build'||round<2||(!item.repeatable&&(!shopOffers.includes(index)||shopPurchased.has(index))))", "if(!item||round<2||!['build','active'].includes(phase)||(!item.repeatable&&(phase!=='build'||!shopOffers.includes(index)||shopPurchased.has(index))))")
+s=s.replace("'전투 중 구매 불가'", "phase==='active'?'배치 한도만 구매 가능':'상점 이용 종료'")
+s=s.replace("${!open||money<item.price||shopPurchased.has(i)?'disabled':''}", "${!(open||(item.repeatable&&round>=2&&phase==='active'))||money<item.price||shopPurchased.has(i)?'disabled':''}")
+s=s.replace('for(const w of walls.values()){let t,s;', "for(const w of (b.type==='bank'?walls.values():[])){let t,s;")
+needle="for(const t of towers){t.cool-=dt;if(t.cool<=0){t.cool+=t.type==='bank'?weaponStats().bankInterval:.5;fireTower(t)}}"
+assert needle in s
+s=s.replace(needle,"for(const t of towers){t.cool-=dt;const target=t.type==='normal'?selectTarget(t):null;if(target)t.angle=Math.atan2(target.y-t.y,target.x-t.x);if(t.cool<=0){if(t.type==='bank'||target){t.cool+=t.type==='bank'?weaponStats().bankInterval:.5;fireTower(t)}else t.cool=0}}")
+s=s.replace('function fireTower(t){', "function selectTarget(t){if(CORE===null)return null;const core=center(CORE);return enemies.filter(e=>e.hp>0&&Math.hypot(e.x-t.x,e.y-t.y)<=NORMAL_RANGE).sort((a,b)=>Math.hypot(a.x-core.x,a.y-core.y)-Math.hypot(b.x-core.x,b.y-core.y)||a.id-b.id)[0]??null}\nfunction fireTower(t){")
+s=s.replace('${stats.normalDamage} 피해 · 0.5초 간격 · ${stats.normalShots}발 · 사거리 5칸', '${stats.normalDamage} 피해 · 자동 조준 · ${stats.normalShots}발 · 사거리 5칸')
+p.write_text(s,encoding='utf-8')
+p=Path('dist/index.html');s=p.read_text(encoding='utf-8').replace('70원','50원').replace('일반 탄환은 5칸 이동하거나 벽·적에 닿으면 소멸합니다.', '일반 포탑은 사거리 5칸 안에서 넥서스에 가장 가까운 적을 자동 조준합니다. 일반 탄환은 벽을 통과하며 5칸 이동하거나 적에 닿으면 소멸합니다.').replace('배치 한도 +1은 50원에 횟수 제한 없이 구매.', '배치 한도 +1은 50원에 횟수 제한 없이 구매하며, 2라운드부터 전투 중에도 구매할 수 있습니다.').replace('각도 입력으로 미세 조절할 수도 있습니다.', '일반 포탑은 전투 중 자동 조준합니다.<br>뱅크샷은 지정한 방향을 유지합니다.');p.write_text(s,encoding='utf-8')
+p=Path('work/check.cjs');s=p.read_text(encoding='utf-8')
+s=s.replace("setAngle(123.4);tool='normal'", "setAngle(123.4);tool='bank'")
+s=s.replace("type:'normal',contacts:new Set()},.04)\"),false", "type:'normal',contacts:new Set()},.04)\"),true")
+s=s.replace('towerCapacity()===6&&money===360', 'towerCapacity()===6&&money===400')
+s=s.replace('money=69;!buyItem(6)&&towerCapacity()===6&&money===69', 'money=49;!buyItem(6)&&towerCapacity()===6&&money===49')
+s=s.replace('money=100;start();!buyItem(6)&&money===100;spawnClock=Infinity;remaining=STEP;update(STEP);towerCapacity()===6&&round===3', 'money=100;start();buyItem(6)&&money===50&&towerCapacity()===7;spawnClock=Infinity;remaining=STEP;update(STEP);towerCapacity()===7&&round===3')
+s=s.replace('buyItem(6)&&towerCapacity()===7&&money===30', 'buyItem(6)&&towerCapacity()===8&&money===0')
+s=s.replace('70-coin','50-coin').replace('normal absorption','normal wall passthrough')
+p.write_text(s,encoding='utf-8')

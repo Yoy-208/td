@@ -1,0 +1,15 @@
+from pathlib import Path
+p=Path('dist/game.js');s=p.read_text(encoding='utf-8')
+s=s.replace("price:10}\n];", "price:10},\n {key:'towerSlots',name:'타워 배치 횟수',effect:'배치 한도 +1 · 횟수 제한 없음',price:70,repeatable:true}\n];")
+assert "key:'towerSlots'" in s
+s=s.replace('function rollShop(){', 'function towerCapacity(){return 4+upgrades.towerSlots}\nfunction rollShop(){')
+s=s.replace('const pool=SHOP_ITEMS.map((_,i)=>i)', 'const pool=SHOP_ITEMS.map((_,i)=>i).filter(i=>!SHOP_ITEMS[i].repeatable)')
+s=s.replace("if(phase!=='build'||round<2||!shopOffers.includes(index)||shopPurchased.has(index))return false;const item=SHOP_ITEMS[index];", "const item=SHOP_ITEMS[index];if(!item||phase!=='build'||round<2||(!item.repeatable&&(!shopOffers.includes(index)||shopPurchased.has(index))))return false;")
+s=s.replace('money-=item.price;shopPurchased.add(index);', 'money-=item.price;if(!item.repeatable)shopPurchased.add(index);')
+s=s.replace("message(`${item.name} ${item.effect} 구매 완료! 모든 해당 포탑에 누적 적용됩니다.`)", "message(item.repeatable?`배치 한도가 ${towerCapacity()}대로 늘어났습니다.`:`${item.name} ${item.effect} 구매 완료! 모든 해당 포탑에 누적 적용됩니다.`)")
+s=s.replace("$('shop-items').innerHTML=shopOffers.map", "$('shop-items').innerHTML=[...shopOffers,6].map")
+s=s.replace('round*2+1', 'towerCapacity()')
+s=s.replace('이번 라운드의 포탑 설치 한도에 도달했습니다.', '포탑 배치 한도에 도달했습니다. 준비 시간에 상점에서 한도를 늘릴 수 있습니다.')
+s=s.replace('포탑 2개를 추가 배치할 수 있습니다.', '상점에서 강화와 배치 한도를 구매할 수 있습니다.')
+p.write_text(s,encoding='utf-8')
+p=Path('dist/index.html');s=p.read_text(encoding='utf-8').replace('id="capacity">0 / 3', 'id="capacity">0 / 4').replace('포탑 3개를 배치', '포탑 4개를 배치').replace('상품별 라운드당 1회 구매', '강화 상품별 라운드당 1회 구매').replace('효과는 모든 해당 포탑에 누적 적용</p>', '효과는 모든 해당 포탑에 누적 적용. 배치 한도 +1은 70원에 횟수 제한 없이 구매.</p>');p.write_text(s,encoding='utf-8')
